@@ -11,8 +11,17 @@ execute:
 #| message: false
 library(tidyverse)
 library(primer.data)
+library(tidymodels)
+library(broom)
 ```
 
+## Logistic Regression Model
+
+Let $Y \sim \text{Bernoulli}(\rho)$ where:
+
+$$
+\rho = \frac{1}{1 + e^{-(\beta_0 + \beta_1 X_1 + \beta_2 X_2 + \cdots + \beta_n X_n)}}
+$$
 
 
-Sending postcards to registered voters is a common part of election campaigns in the U.S. For this analysis, we use data from a 2006 experiment in Michigan to help guide strategies for boosting voter turnout in the current Texas governor’s race. However, we understand that Michigan might not be the same as Texas or the rest of the country.
+Sending postcards to registered voters is a common part of election campaigns in the U.S. For this analysis, we use data from a 2006 experiment in Michigan to help guide strategies for boosting voter turnout in the current Texas governor’s race. However, we understand that Michigan might not be the same as Texas or the rest of the country.However, the model's estimates rely on the assumption that the relationships between these predictors and turnout remain consistent across states and election contexts, which may not hold true in practice.

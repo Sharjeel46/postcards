@@ -1,12 +1,13 @@
 project:
   type: website
 
+
 website:
   title: "postcards"
   navbar:
     left:
-      - href: index.qmd
-        text: Home
+      - href: postcards.qmd
+        text: postcards
       - about.qmd
 
 format:
@@ -16,6 +17,3 @@ format:
       - brand
     css: styles.css
     toc: true
-
-
-

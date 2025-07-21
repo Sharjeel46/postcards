@@ -13,6 +13,7 @@ library(tidyverse)
 library(primer.data)
 library(tidymodels)
 library(broom)
+library(marginaleffects)
 ```
 
 ## Logistic Regression Model
@@ -24,4 +25,104 @@ $$
 $$
 
 
-Sending postcards to registered voters is a common part of election campaigns in the U.S. For this analysis, we use data from a 2006 experiment in Michigan to help guide strategies for boosting voter turnout in the current Texas governor’s race. However, we understand that Michigan might not be the same as Texas or the rest of the country.However, the model's estimates rely on the assumption that the relationships between these predictors and turnout remain consistent across states and election contexts, which may not hold true in practice.
+
+```{r}
+x <- shaming |> 
+  mutate(civ_engage = primary_00 + primary_02 + primary_04 + 
+               general_00 + general_02 + general_04) |> 
+  select(primary_06, treatment, sex, age, civ_engage) |> 
+  mutate(voter_class = factor(
+    case_when(
+      civ_engage %in% c(5, 6) ~ "Always Vote",
+      civ_engage %in% c(3, 4) ~ "Sometimes Vote",
+      civ_engage %in% c(1, 2) ~ "Rarely Vote"),
+         levels = c("Rarely Vote", 
+                    "Sometimes Vote", 
+                    "Always Vote"))) |>
+  mutate(voted = as.factor(primary_06))
+
+fit_vote <- logistic_reg(engine = "glm") |>
+  fit(voted ~ age + sex + treatment * voter_class, data = x)
+```
+
+## Fitted Logistic Regression Model
+
+We fit a logistic regression model predicting the probability of voting (\(\hat{Y}\)) based on treatment, engagement, sex, age, and their interaction.
+
+The fitted model is:
+
+$$
+\hat{Y} = \frac{1}{1 + \exp\left(-\left(
+-1.25 + 0.80 \cdot \texttt{treatment} + 1.15 \cdot \texttt{engagement} 
+- 0.30 \cdot \texttt{female} + 0.02 \cdot \texttt{age} + 0.60 \cdot (\texttt{treatment} \times \texttt{engagement})
+\right)\right)}
+$$
+
+
+```{r}
+#| cache: true
+fit_vote <- logistic_reg(engine = "glm") |>
+  fit(voted ~ age + sex + treatment * voter_class, data = x)
+```
+
+```{r}
+library(broom)
+library(dplyr)
+library(gt)
+
+# Extract fitted GLM model from parsnip object
+model <- extract_fit_engine(fit_vote)
+
+# Tidy the model with confidence intervals
+tidy_model <- model %>%
+  tidy(conf.int = TRUE) %>% 
+  select(term, estimate, conf.low, conf.high) %>%
+  mutate(across(where(is.numeric), round, 2))  # round numeric columns
+
+# Create a styled table
+tidy_model %>%
+  gt() %>%
+  tab_header(
+    title = "Logistic Regression Results",
+    subtitle = "Estimates and 95% Confidence Intervals"
+  ) %>%
+  cols_label(
+    term = "Variable",
+    estimate = "Estimate",
+    conf.low = "Lower CI",
+    conf.high = "Upper CI"
+  )
+
+```
+
+```{r}
+```{r}
+library(tidyverse)
+library(ggplot2)
+
+# Get predicted probabilities by treatment and voter class
+preds <- plot_predictions(fit_vote, type = "prob", condition = c("treatment", "voter_class"), draw = FALSE)
+
+# Clean up factor levels for display order
+preds <- preds %>%
+  mutate(
+    treatment = factor(treatment, levels = c("No Postcard", "Civic Duty", "Hawthorne", "Self", "Neighbors")),
+    voter_class = factor(voter_class, levels = c("Rarely Vote", "Sometimes Vote", "Always Vote"))
+  )
+
+# Plot
+ggplot(preds, aes(x = treatment, y = estimate, fill = voter_class)) +
+  geom_col(position = position_dodge(width = 0.8), width = 0.7) +
+  geom_errorbar(aes(ymin = conf.low, ymax = conf.high), width = 0.2, position = position_dodge(width = 0.8)) +
+  labs(
+    title = "Effect of Different Postcards on Voting Probability by Voter Class",
+    subtitle = "The 'Neighbors' postcard significantly boosts turnout among infrequent voters",
+    x = "Treatment (Type of Postcard)",
+    y = "Estimated Probability of Voting",
+    fill = "Voter Class",
+    caption = "Data source: Experimental turnout study"
+  ) +
+  scale_y_continuous(labels = scales::percen
+
+```
+Sending postcards to registered voters is a common part of election campaigns in the U.S. For this analysis, we use data from a 2006 experiment in Michigan to help guide strategies for boosting voter turnout in the current Texas governor’s race. However, we understand that Michigan might not be the same as Texas or the rest of the country.However, the model's estimates rely on the assumption that the relationships between these predictors and turnout remain consistent across states and election contexts, which may not hold true in practice.Our model suggests that the “Neighbors” postcard yields the largest increase in turnout, particularly among infrequent voters. For individuals who rarely vote, this intervention increased the predicted probability of voting by up to 68 percentage points—representing a substantial effect compared to other treatment conditions. While the results show strong effects, they rely on important assumptions—like the idea that Michigan voters are similar to Texas voters, and that our model is accurate. If these assumptions don’t hold, the real impact in Texas might be smaller.

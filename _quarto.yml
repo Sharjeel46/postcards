@@ -1,14 +1,15 @@
 project:
   type: website
-
+  output-dir: docs
 
 website:
   title: "postcards"
   navbar:
     left:
       - href: postcards.qmd
-        text: postcards
-      - about.qmd
+        text: Postcards
+      - href: about.qmd
+        text: About
 
 format:
   html:
